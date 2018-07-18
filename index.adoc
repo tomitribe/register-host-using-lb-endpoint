@@ -89,10 +89,10 @@ curl  http://localhost:5555/movie-api/api/language
 === Run Tribestream API Gateway (TAG)
 Open a terminal and execute the following command according to your operating system:
 
-* For linux:
+* For linux: +
 	`docker run -it --net="host" -de LICENSE=accept --name tag-dynamic-lb tomitribe/tribestream-api-gateway tomitribe/tribestream-api-gateway`
 
-* For OS X and Windows:
+* For OS X and Windows: +
      `docker run -it -e LICENSE=accept --name tag-dynamic-lb -p 8080:8080  tomitribe/tribestream-api-gateway`
 
 
