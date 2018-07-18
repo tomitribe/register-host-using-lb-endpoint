@@ -1,0 +1,9 @@
+%YAML 1.2
+---
+documentation:
+
+  - doc_root: 'index.adoc'
+    name: 'Examples'
+    display_name: 'Register hosts using load balancer endpoint'
+    public_path: 'en/api-gateway/register-hosts-using-load-balancer-endpoint'
+    single_page: 'true'

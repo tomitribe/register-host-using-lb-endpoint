@@ -1,0 +1,347 @@
+:encoding: UTF-8
+:linkattrs:
+:sectlink:
+:sectanchors:
+:sectid:
+:imagesdir: media
+:leveloffset: 1
+
+= Register hosts using load balancer endpoint
+Time: 15 minutes
+
+Learning objectives
+
+* Setup a TAG account with Load balancer endpoint requirements
+* Configure and use the TAG Load balancer API endpoint to register hosts using curl.
+* Test the microservice hosts added via the TAG Load Balancer API endpoint.
+
+Prerequisites
+
+* link:https://www.docker.com/community-edition[Docker, window="_blank"]
+* link:https://curl.haxx.se/[Curl, window="_blank"] 
+* Previous basic knowledge about TAG Routes, API Connections and Load Balancer configuration.
+
+
+////
+x start tag
+x start endpoint 1
+x docker run -e LANG=ENGLISH -d -p 3333:9090 --name movie-api-en  tomitribedev/movie-api
+
+
+x create api connection: movies
+x create a route: cinema
+x RewriteRule "^/?cinema/api/language$" "%{API:movies}/movie-api/api/language" [P,NE]
+
+x Create a user: devops
+
+Update user devops:
+      Role: movies and gateway-admin
+
+Update Route: register-host-to-load-balancer
+
+curl to add hosts to LB
+
+stop tag
+
+stop endpoints
+////
+=== Architectural Diagram
+
+image::architectural_diagram.png[]
+
+During this guide we are going to lear how to dynamically add hosts to TAG Load Balancer in a DevOps fashion using TAG built-in load balancer API endpoint. In the diagram the main actors are:
+
+* DevOps TAG account that has permissions to dynamically add hosts to a TAG  Load Balancer.
+* TAG Load Balancer that is been configured as part of an API Connection
+* Three deployments of the movie microservice we have been using in previous guides.
+
+=== Run the demo Microservice
+
+
+For this guide we are going to scale the movie microservice up to three instances with a custom language configuration: English, Spanish and French. 
+
+For each microservice instance we are going to use the following names and exposed ports:
+
+* movie-api-en (port 3333)
+* movie-api-es (port 4444)
+* movie-api-fr (port 5555)
+
+In order to run the three microservice instances we need to open a terminal and execute the following command:
+```
+docker run -e LANG=ENGLISH -d -p 3333:9090 --name movie-api-en  tomitribedev/movie-api
+docker run -e LANG=SPANISH -d -p 4444:9090 --name movie-api-es  tomitribedev/movie-api
+docker run -e LANG=FRENCH  -d -p 5555:9090 --name movie-api-fr  tomitribedev/movie-api
+```
+
+Using curl, we can validate that our microservices are up and running by executing the following commands.
+Notice that each  microservice returns in the payload it’s own Language Configuration.
+
+```
+curl  http://localhost:3333/movie-api/api/language
+"ENGLISH"
+curl  http://localhost:4444/movie-api/api/language
+"SPANISH"
+curl  http://localhost:5555/movie-api/api/language
+"FRENCH"
+```
+
+
+=== Run Tribestream API Gateway (TAG)
+Open a terminal and execute the following command according to your operating system:
+
+* For linux:
+	`docker run -it --net="host" -de LICENSE=accept --name tag-dynamic-lb tomitribe/tribestream-api-gateway tomitribe/tribestream-api-gateway`
+
+* For OS X and Windows:
+     `docker run -it -e LICENSE=accept --name tag-dynamic-lb -p 8080:8080  tomitribe/tribestream-api-gateway`
+
+
+TAG is ready when you see the following message on the TAG log:
+
+```
+INFO [main] org.apache.coyote.AbstractProtocol.start Starting ProtocolHandler ["http-bio-8080"]
+INFO [main] org.apache.coyote.AbstractProtocol.start Starting ProtocolHandler ["ajp-bio-8009"]
+INFO [main] org.apache.catalina.startup.Catalina.start Server startup in 18348 ms
+```
+
+To detach the container log output,  type on the terminal: `ctrl+p` followed by `ctrl+q` 
+
+you can now open a browser and navigate to: `http://localhost:8080/tag`
+
+Login into the TAG dashboard using the following credentials: username: `admin`, password: `admin`.
+If this is not the first time you are login into TAG, you may be redirected straight to the `Dashboard` page.
+
+image::login.gif[]
+
+
+
+=== Import TAG entities
+In order to focus the content of this guide to the learning objectives described at the beginning of the guide, we are providing the following commands to import into TAG the necessary entities who's configuration instructions are already covered in previous guides from the Learning Journey:
+
+* An API Connection
+** Name: `movies` 
+** Location: 
+    *** For linux:  `http://localhost:3333`
+    *** For OS X and Windows: `http://host.docker.internal:3333`
+* A Route
+** Name: `cinema`
+** Mod_Rewrite: `RewriteRule "^/?cinema/language$" "%{API:movies}/movie-api/api/language" [P,NE]`
+* An account
+** Username: `devops`
+** Email: `devops@cinema.com`
+** Full Name: `Development and Operations`
+
+image::imported_entities.png[]
+
+On a terminal execute the following commands:
+
+
+
+Import *movies API Connection* :
+
+* For Linux: +
+```
+curl -X POST http://localhost:8080/tag/api/http/ -H 'Authorization: Basic YWRtaW46YWRtaW4=' -H 'Content-Type: application/json' -d '{ "endpoint": "http://host.docker.internal:3333", "name": "movies", "id": "movies" }'
+```
+* For OS X and Windows: +
+```
+curl -X POST http://localhost:8080/tag/api/http/ -H 'Authorization: Basic YWRtaW46YWRtaW4=' -H 'Content-Type: application/json' -d '{ "endpoint": "http://localhost:3333", "name": "movies", "id": "movies" }'
+```
+
+Import *cinema Route*:
+```
+curl -X POST http://localhost:8080/tag/api/route -H 'Authorization: Basic YWRtaW46YWRtaW4=' -H 'Content-Type: application/json' -d '{ "index": 1, "modRewrite": "RewriteRule \"^/?cinema/language$\" \"%{API:movies}/movie-api/api/language\" [P,NE]", "lastMatchPattern": "^/?cinema/language$", "name": "cinema", "id": "cinema" }'
+```
+
+Import *devops Account*:
+```
+curl -X POST http://localhost:8080/tag/api/account/  -H 'Authorization: Basic YWRtaW46YWRtaW4=' -H 'Content-Type: application/json' -d '{ "displayName": "Development and Operations", "type": "CLIENT","sourceType": "ACCOUNT", "id": "devops", "sourceRef": { "id": "gateway-accounts" }, "email": "devops@cinema.com", "username": "devops" }'
+```
+
+Notice that at this point only the microservice instance `movie-api-en` using the port `3333` was configured inside the imported `movies` API Connection. The other two instances (movie-api-es and movie-api-fr) are going to be dynamically added and configured later in this guide using TAG built-in load balancer API endpoint.
+
+
+We can now test how TAG is  able to route the incoming request to the `movie-api-en` microservice using the `cinema` route and the `movies` API Connection.
+
+In a terminal execute the following command:
+```
+curl http://localhost:8080/cinema/language
+```
+
+Output:
+```
+"ENGLISH"
+```
+
+To test if the account was successfully imported you can open a browser and navigate to: `http://localhost:8080/tag/account/devops`. You should be able to see the `Development and Operations` account detail page.
+
+image::devops_account.png[]
+
+
+
+
+
+
+=== Register a new host using the Load Balancer API endpoint
+
+////
+We can now proceed with the prerequisites related with the registration process. We need to be aware of the following validations:
+////
+
+TAG has an out of the box Route called `Register Host to Load Balancer`, this is the route responsible for:
+
+. Match only incoming request with the pattern:  `/api/http/(.+)/hosts/register`. Notice that `(.+)` will be substituted with the API Connection name we want to update. In our demonstration we will use the imported API Connection: `movies`.
+
+. Enforce authorization. The route will validate that the Account used for the HTTP request has a valid Role. The name of the role should be exactly the same as the API Connection. In our demonstration we need to make sure the user `devops` has the role `movies` and also the role `gateway-admin` that allow the account to consume the TAG REST API. 
+
+. Enforce authentication. By default the route has HTTP Signatures as the security profile that is going to be enforced. For this demonstration we will use Basic Auth in order simplify the validation scenarios.
+
+Let's now configure our running TAG instance with the prerequisites described in 2) and 3).
+
+==== Update the `devops` account
+Open a browser and navigate to: http://localhost:8080/tag/account/devops and add to the account the following attributes and save the changes:
+
+* Password: `secretoperation`
+* Roles: `gateway-admin`, `movies`
+
+image::add_password.gif[]
+
+image::add_roles.gif[]
+
+
+==== Update the `Register Host to Load Balancer` Route
+Open a browser and navigate to: http://localhost:8080/tag/route-rewrite/register-host-to-load-balancer, replace current Security Profiles with just `Basic Auth Profile` and save the changes.
+
+image::update_security_profile.gif[]
+
+
+==== Register the `api-movie-es` host 
+
+We are going to use curl command to send a request to the TAG Load Balancer API endpoint, notice the reference the request is making to the `movies` API Connection using the account `devops` and it's password `secretoperation`. This HTTP request is going to register the host for the `api-movie-es` microservice currently running on port `4444`.
+
+image::add_host_4444.png[]
+
+For linux:
+
+```
+curl -X POST \
+  http://localhost:8080/api/http/movies/hosts/register \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Basic ZGV2b3BzOnNlY3JldG9wZXJhdGlvbg==' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "endpoint":"http://localhost:4444/",
+    "active":true,
+    "weight":1
+  }' 
+```
+
+
+For OS X and Windows
+```
+curl -X POST \
+  http://localhost:8080/api/http/movies/hosts/register \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Basic ZGV2b3BzOnNlY3JldG9wZXJhdGlvbg==' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "endpoint":"http://host.docker.internal:4444/",
+    "active":true,
+    "weight":1
+  }' 
+```
+
+You can verify that the host for `api-movie-es` on port `4444` was successfully registered by navigating with a browser to http://localhost:8080/tag/http/movies. 
+
+image::added_host_2.png[]
+
+
+We can now test how TAG is  able to route the incoming request to both instance of the movie microservice using the `cinema` route and the `movies` API Connection that now hast Load Balancer activated:
+
+In a terminal execute the 4 times the following command:
+```
+curl http://localhost:8080/cinema/language
+```
+
+Output:
+```
+"ENGLISH"
+"SPANISH"
+"ENGLISH"
+"SPANISH"
+```
+
+
+
+==== Register `api-movie-fr` host 
+We can repeat the steps we did on the previous section. The curl command to add the host for `api-movies-fr` (port 5555) into the `movies` API Connection Load Balancer should be:
+
+image::add_host_5555.png[]
+
+For linux:
+
+```
+curl -X POST \
+  http://localhost:8080/api/http/movies/hosts/register \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Basic ZGV2b3BzOnNlY3JldG9wZXJhdGlvbg==' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "endpoint":"http://localhost:5555/",
+    "active":true,
+    "weight":1
+  }' 
+```
+
+
+For OS X and Windows
+```
+curl -X POST \
+  http://localhost:8080/api/http/movies/hosts/register \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Basic ZGV2b3BzOnNlY3JldG9wZXJhdGlvbg==' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "endpoint":"http://host.docker.internal:5555/",
+    "active":true,
+    "weight":1
+  }' 
+```
+
+We can now test how TAG is able to route the incoming request to the three instance of the movie microservice using the `cinema` route and the `movies` API Connection that now hast Load Balancer activated:
+
+In a terminal execute the 4 times the following command:
+```
+curl http://localhost:8080/cinema/language
+```
+
+Output:
+```
+"ENGLISH"
+"SPANISH"
+"FRENCH"
+"ENGLISH"
+```
+
+=== Stop Tribestream API Gateway
+Since both the TAG and the microservices were created with a specific container name, you can now stop the
+containers from the command line with the following command.
+
+Stopping TAG
+```
+docker stop tag-dynamic-lb
+```
+
+Stopping the microservices
+```
+docker stop movie-api-en
+docker stop movie-api-es
+docker stop movie-api-fr
+```
+
+=== Summary
+Congratulations! in this module you learned about:
+
+* Setup a TAG account with Load balancer endpoint requirements
+* Configure and use the TAG Load balancer API endpoint to register hosts using curl.
+* Test the microservice hosts added via the TAG Load Balancer API endpoint.
