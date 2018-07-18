@@ -21,30 +21,6 @@ Prerequisites
 * link:https://curl.haxx.se/[Curl, window="_blank"] 
 * Previous basic knowledge about TAG Routes, API Connections and Load Balancer configuration.
 
-
-////
-x start tag
-x start endpoint 1
-x docker run -e LANG=ENGLISH -d -p 3333:9090 --name movie-api-en  tomitribedev/movie-api
-
-
-x create api connection: movies
-x create a route: cinema
-x RewriteRule "^/?cinema/api/language$" "%{API:movies}/movie-api/api/language" [P,NE]
-
-x Create a user: devops
-
-Update user devops:
-      Role: movies and gateway-admin
-
-Update Route: register-host-to-load-balancer
-
-curl to add hosts to LB
-
-stop tag
-
-stop endpoints
-////
 === Architectural Diagram
 
 image::architectural_diagram.png[]
