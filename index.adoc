@@ -117,11 +117,11 @@ Import *movies API Connection* :
 
 * For Linux: +
 ```
-curl -X POST http://localhost:8080/tag/api/http/ -H 'Authorization: Basic YWRtaW46YWRtaW4=' -H 'Content-Type: application/json' -d '{ "endpoint": "http://host.docker.internal:3333", "name": "movies", "id": "movies" }'
+curl -X POST http://localhost:8080/tag/api/http/ -H 'Authorization: Basic YWRtaW46YWRtaW4=' -H 'Content-Type: application/json' -d '{ "endpoint": "http://localhost:3333", "name": "movies", "id": "movies" }'
 ```
 * For OS X and Windows: +
 ```
-curl -X POST http://localhost:8080/tag/api/http/ -H 'Authorization: Basic YWRtaW46YWRtaW4=' -H 'Content-Type: application/json' -d '{ "endpoint": "http://localhost:3333", "name": "movies", "id": "movies" }'
+curl -X POST http://localhost:8080/tag/api/http/ -H 'Authorization: Basic YWRtaW46YWRtaW4=' -H 'Content-Type: application/json' -d '{ "endpoint": "http://host.docker.internal:3333", "name": "movies", "id": "movies" }'
 ```
 
 Import *cinema Route*:
